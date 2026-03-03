@@ -3,6 +3,106 @@
  */
 
 import type { Peer, MessageInput } from "@honcho-ai/sdk";
+import type { NoisePattern } from "./config.js";
+
+// ── Built-in noise patterns ───────────────────────────────────────────────────
+// These are always active. Add custom patterns via config.noisePatterns.
+
+export const DEFAULT_NOISE_PATTERNS: NoisePattern[] = [
+  // Heartbeat ping responses — assistant replying with just "HEARTBEAT_OK"
+  {
+    label: "heartbeat-ok-response",
+    pattern: "^HEARTBEAT_OK\\s*$",
+    skipMessage: true,
+    role: "assistant",
+  },
+  // Cron reminder injection — the full scheduled reminder boilerplate
+  {
+    label: "cron-reminder-boilerplate",
+    pattern: "A scheduled reminder has been triggered",
+    skipMessage: true,
+    role: "user",
+  },
+  // Session startup command
+  {
+    label: "session-startup-command",
+    pattern: "Execute your Session Startup sequence now",
+    skipMessage: true,
+    role: "user",
+  },
+  // Inline: conversation metadata JSON blocks (timestamp/sender headers)
+  {
+    label: "conversation-metadata-json",
+    pattern: "Conversation info \\(untrusted metadata\\)[\\s\\S]*?```",
+    skipMessage: false,
+  },
+  // Inline: queued messages wrapper header
+  {
+    label: "queued-messages-wrapper",
+    pattern: "\\[Queued messages while agent was busy\\][^\\n]*\\n---",
+    skipMessage: false,
+  },
+  // Inline: replied message context block (untrusted)
+  {
+    label: "replied-message-context",
+    pattern: "Replied message \\(untrusted, for context\\)[\\s\\S]*?```",
+    skipMessage: false,
+  },
+];
+
+/**
+ * Build compiled noise filter list from defaults + user-supplied patterns.
+ */
+export type CompiledNoiseFilter = {
+  label: string;
+  regex: RegExp;
+  skipMessage: boolean;
+  role?: "user" | "assistant";
+};
+
+export function buildNoiseFilters(extra: NoisePattern[] = []): CompiledNoiseFilter[] {
+  return [...DEFAULT_NOISE_PATTERNS, ...extra].map((p) => ({
+    label: p.label,
+    regex: new RegExp(p.pattern, "gi"),
+    skipMessage: p.skipMessage !== false, // default true
+    role: p.role,
+  }));
+}
+
+/**
+ * Returns true if the message should be dropped entirely.
+ */
+export function shouldSkipMessage(
+  content: string,
+  role: "user" | "assistant",
+  filters: CompiledNoiseFilter[]
+): boolean {
+  for (const f of filters) {
+    if (f.skipMessage && (f.role === undefined || f.role === role)) {
+      f.regex.lastIndex = 0;
+      if (f.regex.test(content)) return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Strip inline noise from content without dropping the whole message.
+ */
+export function stripInlineNoise(
+  content: string,
+  role: "user" | "assistant",
+  filters: CompiledNoiseFilter[]
+): string {
+  let result = content;
+  for (const f of filters) {
+    if (!f.skipMessage && (f.role === undefined || f.role === role)) {
+      f.regex.lastIndex = 0;
+      result = result.replace(f.regex, "");
+    }
+  }
+  return result.trim();
+}
 
 /**
  * Build a Honcho session key from OpenClaw context.
@@ -47,7 +147,8 @@ export function cleanMessageContent(content: string): string {
 export function extractMessages(
   rawMessages: unknown[],
   ownerPeer: Peer,
-  agentPeer: Peer
+  agentPeer: Peer,
+  noiseFilters: CompiledNoiseFilter[] = []
 ): MessageInput[] {
   const result: MessageInput[] = [];
 
@@ -76,6 +177,12 @@ export function extractMessages(
 
     content = cleanMessageContent(content);
     content = content.trim();
+
+    if (!content) continue;
+
+    // Apply noise filters
+    if (shouldSkipMessage(content, role, noiseFilters)) continue;
+    content = stripInlineNoise(content, role, noiseFilters);
 
     if (content) {
       const peer = role === "user" ? ownerPeer : agentPeer;

@@ -2,7 +2,7 @@
 import type { OpenClawPluginApi } from "openclaw/plugin-sdk";
 import type { PluginState } from "../state.js";
 import { OWNER_ID } from "../state.js";
-import { buildSessionKey, isSubagentSession, extractParentAgentKey, extractMessages } from "../helpers.js";
+import { buildSessionKey, isSubagentSession, extractParentAgentKey, extractMessages, buildNoiseFilters } from "../helpers.js";
 
 export function registerCaptureHook(api: OpenClawPluginApi, state: PluginState): void {
   api.on("agent_end", async (event, ctx) => {
@@ -46,7 +46,8 @@ export function registerCaptureHook(api: OpenClawPluginApi, state: PluginState):
       }
 
       const newRawMessages = event.messages.slice(lastSavedIndex);
-      const messages = extractMessages(newRawMessages, state.ownerPeer!, agentPeer);
+      const noiseFilters = buildNoiseFilters(state.cfg.noisePatterns);
+      const messages = extractMessages(newRawMessages, state.ownerPeer!, agentPeer, noiseFilters);
 
       if (messages.length === 0) {
         await session.setMetadata({ ...meta, ...sessionMeta, lastSavedIndex: event.messages.length });

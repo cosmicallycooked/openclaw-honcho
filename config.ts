@@ -2,10 +2,23 @@
  * Configuration schema and parsing for the Honcho memory plugin.
  */
 
+export type NoisePattern = {
+  /** Human-readable label for logging */
+  label: string;
+  /** Regex pattern string (case-insensitive by default) */
+  pattern: string;
+  /** If true, skip the entire message. If false, strip matched content only. Default: true */
+  skipMessage?: boolean;
+  /** Restrict to role: "user" | "assistant" | undefined (both) */
+  role?: "user" | "assistant";
+};
+
 export type HonchoConfig = {
   apiKey?: string;
   workspaceId: string;
   baseUrl: string;
+  /** Patterns to filter from memory. Merged with built-in defaults. */
+  noisePatterns?: NoisePattern[];
 };
 
 /**
@@ -34,6 +47,10 @@ export const honchoConfigSchema = {
       apiKey = process.env.HONCHO_API_KEY;
     }
 
+    const noisePatterns: NoisePattern[] = Array.isArray(cfg.noisePatterns)
+      ? (cfg.noisePatterns as NoisePattern[])
+      : [];
+
     return {
       apiKey,
       workspaceId:
@@ -44,6 +61,7 @@ export const honchoConfigSchema = {
         typeof cfg.baseUrl === "string" && cfg.baseUrl.length > 0
           ? cfg.baseUrl
           : process.env.HONCHO_BASE_URL ?? "https://api.honcho.dev",
+      noisePatterns,
     };
   },
 };

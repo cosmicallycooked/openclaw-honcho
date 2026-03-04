@@ -36,7 +36,7 @@ export function registerCaptureHook(api: OpenClawPluginApi, state: PluginState):
       const lastSavedIndex = (meta.lastSavedIndex as number) ?? 0;
 
       await session.addPeers([
-        [OWNER_ID, { observeMe: true, observeOthers: false }],
+        [OWNER_ID, { observeMe: true, observeOthers: true }],
         [agentPeer.id, { observeMe: true, observeOthers: true }],
       ]);
 

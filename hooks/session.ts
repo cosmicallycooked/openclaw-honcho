@@ -63,4 +63,10 @@ export function registerSessionHooks(api: OpenClawPluginApi, state: PluginState)
       api.logger.warn?.(`[honcho] Failed to bootstrap session context: ${error}`);
     }
   });
+
+  api.on("session_end", (_event, ctx) => {
+    if (isSubagentSession(ctx)) return;
+    const sessionKey = buildSessionKey(ctx);
+    state.contextCache.delete(sessionKey);
+  });
 }

@@ -19,6 +19,16 @@ export function registerContextHook(api: OpenClawPluginApi, state: PluginState):
 
       const sections: string[] = [];
 
+      // For main sessions, serve from the session_start cache when available.
+      // A cache hit with null means there is no history — skip immediately.
+      // A cache miss (key absent) means session_start hasn't fired yet; fall
+      // through to the live Honcho call as a safety net.
+      if (!isSubagent && state.contextCache.has(sessionKey)) {
+        const cached = state.contextCache.get(sessionKey) ?? null;
+        if (!cached) return;
+        return { systemPrompt: cached };
+      }
+
       if (isSubagent) {
         try {
           const peerCtx = await agentPeer.context({ target: state.ownerPeer! });

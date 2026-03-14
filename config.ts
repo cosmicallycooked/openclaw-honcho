@@ -17,6 +17,7 @@ export type HonchoConfig = {
   ownerObserveOthers: boolean;
   contextTokens: number;
   maxConclusions: number;
+  dreamOnSessionEnd: boolean;
 };
 
 /**
@@ -64,6 +65,7 @@ export const honchoConfigSchema = {
       ownerObserveOthers: typeof cfg.ownerObserveOthers === "boolean" ? cfg.ownerObserveOthers : false,
       contextTokens: typeof cfg.contextTokens === "number" && cfg.contextTokens > 0 ? cfg.contextTokens : 4000,
       maxConclusions: typeof cfg.maxConclusions === "number" && cfg.maxConclusions > 0 ? cfg.maxConclusions : 50,
+      dreamOnSessionEnd: typeof cfg.dreamOnSessionEnd === "boolean" ? cfg.dreamOnSessionEnd : false,
     };
   },
 };

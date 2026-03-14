@@ -36,6 +36,11 @@
         "type": "number",
         "default": 50,
         "description": "Maximum number of conclusions to include in the peer representation."
+      },
+      "dreamOnSessionEnd": {
+        "type": "boolean",
+        "default": false,
+        "description": "Schedule a Honcho dream (memory consolidation) when a session ends."
       }
     }
   },

@@ -64,9 +64,22 @@ export function registerSessionHooks(api: OpenClawPluginApi, state: PluginState)
     }
   });
 
-  api.on("session_end", (_event, ctx) => {
+  api.on("session_end", async (_event, ctx) => {
     if (isSubagentSession(ctx)) return;
     const sessionKey = buildSessionKey(ctx);
     state.contextCache.delete(sessionKey);
+
+    if (state.cfg.dreamOnSessionEnd) {
+      try {
+        await state.ensureInitialized();
+        const agentId = ctx.agentId ?? state.resolveDefaultAgentId();
+        const agentPeer = await state.getAgentPeer(agentId);
+        const session = await state.honcho.session(sessionKey, {});
+        await state.honcho.scheduleDream({ observer: agentPeer, session });
+        api.logger.debug?.(`[honcho] Scheduled dream for session ${sessionKey}`);
+      } catch (error) {
+        api.logger.warn?.(`[honcho] Failed to schedule dream: ${error}`);
+      }
+    }
   });
 }

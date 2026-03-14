@@ -33,6 +33,14 @@ function makeApi(cfg: Record<string, unknown> = {}) {
     async fire(event: string, eventData: unknown, ctx: unknown) {
       for (const h of handlers.get(event) ?? []) await h(eventData, ctx);
     },
+    /** Like fire(), but returns the first non-undefined result from a hook. */
+    async fireCapture(event: string, eventData: unknown, ctx: unknown): Promise<unknown> {
+      for (const h of handlers.get(event) ?? []) {
+        const result = await h(eventData, ctx);
+        if (result !== undefined) return result;
+      }
+      return undefined;
+    },
     logger: { info: () => {}, warn: () => {}, debug: () => {}, error: () => {} },
     config: {
       agents: { list: [{ id: AGENT_ID, default: true }] },
@@ -81,22 +89,35 @@ maybe("session hooks: context cache", () => {
     expect(state.contextCache.has(SESSION_KEY)).toBe(true);
   });
 
-  it("before_prompt_build returns the cached prompt", async () => {
-    let result: unknown;
-    // Temporarily capture the return value from the hook.
-    const originalFire = api.fire.bind(api);
-    const handlers = (api as unknown as { on: typeof api.on })["on"];
-    void handlers; // unused — we call fire directly and inspect state
-    const cached = state.contextCache.get(SESSION_KEY);
-    // Fire before_prompt_build — should return cached value, not call Honcho again.
-    await api.fire(
+  it("before_prompt_build returns prependContext (not systemPrompt) from cache", async () => {
+    // Manually prime cache with known content — Honcho won't produce a representation
+    // for a freshly seeded session without a dream, so we control the value here.
+    const fakeContext = "## User Memory Context\n\nKey facts:\n• Prefers TypeScript";
+    state.contextCache.set(SESSION_KEY, fakeContext);
+
+    const result = await api.fireCapture(
+      "before_prompt_build",
+      { prompt: "hello", messages: [] },
+      SESSION_CTX,
+    ) as Record<string, unknown> | undefined;
+
+    expect(result).toBeDefined();
+    expect(result).not.toHaveProperty("systemPrompt");
+    expect(result).toHaveProperty("prependContext", fakeContext);
+    // Cache must be unchanged (not evicted or mutated by context hook).
+    expect(state.contextCache.get(SESSION_KEY)).toBe(fakeContext);
+  });
+
+  it("before_prompt_build returns undefined when cache is null (no history)", async () => {
+    state.contextCache.set(SESSION_KEY, null);
+
+    const result = await api.fireCapture(
       "before_prompt_build",
       { prompt: "hello", messages: [] },
       SESSION_CTX,
     );
-    void originalFire;
-    // Cache should be unchanged (not evicted or mutated by context hook).
-    expect(state.contextCache.get(SESSION_KEY)).toBe(cached);
+
+    expect(result).toBeUndefined();
   });
 
   it("session_end evicts the cache entry", async () => {

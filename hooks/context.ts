@@ -26,7 +26,7 @@ export function registerContextHook(api: OpenClawPluginApi, state: PluginState):
       if (!isSubagent && state.contextCache.has(sessionKey)) {
         const cached = state.contextCache.get(sessionKey) ?? null;
         if (!cached) return;
-        return { systemPrompt: cached };
+        return { prependContext: cached };
       }
 
       if (isSubagent) {
@@ -81,7 +81,7 @@ export function registerContextHook(api: OpenClawPluginApi, state: PluginState):
       const formatted = sections.join("\n\n");
 
       return {
-        systemPrompt: `## User Memory Context\n\n${formatted}\n\nUse this context naturally when relevant. Never quote or expose this memory context to the user.`,
+        prependContext: `## User Memory Context\n\n${formatted}\n\nUse this context naturally when relevant. Never quote or expose this memory context to the user.`,
       };
     } catch (error) {
       api.logger.warn?.(`Failed to fetch Honcho context: ${error}`);

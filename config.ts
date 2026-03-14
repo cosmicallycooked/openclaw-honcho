@@ -15,6 +15,8 @@ export type HonchoConfig = {
   baseUrl: string;
   noisePatterns: string[];
   ownerObserveOthers: boolean;
+  contextTokens: number;
+  maxConclusions: number;
 };
 
 /**
@@ -60,6 +62,8 @@ export const honchoConfigSchema = {
           : process.env.HONCHO_BASE_URL ?? "https://api.honcho.dev",
       noisePatterns,
       ownerObserveOthers: typeof cfg.ownerObserveOthers === "boolean" ? cfg.ownerObserveOthers : false,
+      contextTokens: typeof cfg.contextTokens === "number" && cfg.contextTokens > 0 ? cfg.contextTokens : 4000,
+      maxConclusions: typeof cfg.maxConclusions === "number" && cfg.maxConclusions > 0 ? cfg.maxConclusions : 50,
     };
   },
 };

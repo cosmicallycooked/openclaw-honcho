@@ -26,6 +26,16 @@
         "type": "boolean",
         "default": false,
         "description": "Whether the owner peer observes agent messages. When true, Honcho models the user's awareness of assistant responses."
+      },
+      "contextTokens": {
+        "type": "number",
+        "default": 4000,
+        "description": "Target token budget for context retrieval (peerCard + representation + summary)."
+      },
+      "maxConclusions": {
+        "type": "number",
+        "default": 50,
+        "description": "Maximum number of conclusions to include in the peer representation."
       }
     }
   },

@@ -52,9 +52,10 @@ export function registerContextHook(api: OpenClawPluginApi, state: PluginState):
         try {
           context = await session.context({
             summary: true,
-            tokens: 2000,
+            tokens: state.cfg.contextTokens,
             peerTarget: state.ownerPeer!,
             peerPerspective: agentPeer,
+            representationOptions: { maxConclusions: state.cfg.maxConclusions },
           });
         } catch (e: unknown) {
           const isNotFound =

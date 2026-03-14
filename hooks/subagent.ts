@@ -1,10 +1,5 @@
 // @ts-ignore - resolved by openclaw runtime
-import type {
-  OpenClawPluginApi,
-  PluginHookSubagentContext,
-  PluginHookSubagentSpawnedEvent,
-  PluginHookSubagentEndedEvent,
-} from "openclaw/plugin-sdk";
+import type { OpenClawPluginApi, PluginHookSubagentContext, PluginHookSubagentSpawnedEvent, PluginHookSubagentEndedEvent } from "openclaw/plugin-sdk";
 
 /**
  * Module-level singleton: childSessionKey → parent agent ID.

@@ -49,7 +49,7 @@ maybe('subagent session peers', () => {
         await api.fire('gateway_start', {}, {});
         // Set up the parent→child mapping that subagent_spawned normally provides.
         const parentSessionKey = `parent-prime-${TS}`;
-        await api.fire('before_agent_start', {}, { sessionKey: parentSessionKey, agentId: 'prime' });
+        await api.fire('before_prompt_build', {}, { sessionKey: parentSessionKey, agentId: 'prime' });
         await api.fire('subagent_spawned', {}, { childSessionKey: OPENCLAW_SESSION, requesterSessionKey: parentSessionKey });
         await api.fire('agent_end', {
             success: true,

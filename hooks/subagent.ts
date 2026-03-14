@@ -8,14 +8,14 @@ import type { OpenClawPluginApi, PluginHookSubagentContext } from "openclaw/plug
 export const subagentParentMap = new Map<string, string>();
 
 /**
- * Maps OpenClaw sessionKey → agentId, built from before_agent_start.
+ * Maps OpenClaw sessionKey → agentId, built from before_prompt_build.
  * Used to resolve the parent's agent ID from ctx.requesterSessionKey in
  * subagent_spawned without relying on session-key string parsing.
  */
 const sessionKeyToAgentId = new Map<string, string>();
 
 export function registerSubagentHooks(api: OpenClawPluginApi): void {
-  api.on("before_agent_start", (_event, ctx) => {
+  api.on("before_prompt_build", (_event, ctx) => {
     if (ctx.sessionKey && ctx.agentId) {
       sessionKeyToAgentId.set(ctx.sessionKey, ctx.agentId);
     }

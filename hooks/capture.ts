@@ -48,14 +48,20 @@ export function registerCaptureHook(api: OpenClawPluginApi, state: PluginState):
       const lastSavedIndex = Math.min(Math.max(rawLastSavedIndex, 0), event.messages.length);
       const startIndex = Math.max(turnStartIndex, lastSavedIndex);
 
-      const peerConfigs: Array<[string, { observeMe: boolean; observeOthers: boolean }]> = [
-        [OWNER_ID, { observeMe: true, observeOthers: state.cfg.ownerObserveOthers }],
-        [agentPeer.id, { observeMe: true, observeOthers: true }],
-      ];
-      if (parentPeer) {
-        // Parent agent can silently observe subagent behavior without contributing messages.
-        peerConfigs.push([parentPeer.id, { observeMe: false, observeOthers: true }]);
-      }
+      const peerConfigs: Array<[string, { observeMe: boolean; observeOthers: boolean }]> = isSubagent
+        ? [
+            [agentPeer.id, { observeMe: true, observeOthers: true }],
+            // In subagent sessions the owner has no messages — allow observation but skip self-conclusions.
+            [OWNER_ID, { observeMe: false, observeOthers: state.cfg.ownerObserveOthers }],
+            // Parent contributed the "user" messages, so it earns its own conclusions too.
+            ...(parentPeer
+              ? [[parentPeer.id, { observeMe: true, observeOthers: true }] as [string, { observeMe: boolean; observeOthers: boolean }]]
+              : []),
+          ]
+        : [
+            [OWNER_ID, { observeMe: true, observeOthers: state.cfg.ownerObserveOthers }],
+            [agentPeer.id, { observeMe: true, observeOthers: true }],
+          ];
 
       await session.addPeers(peerConfigs);
 
@@ -65,7 +71,10 @@ export function registerCaptureHook(api: OpenClawPluginApi, state: PluginState):
       }
 
       const newRawMessages = event.messages.slice(startIndex);
-      const messages = extractMessages(newRawMessages, state.ownerPeer!, agentPeer, state.cfg.noisePatterns);
+      // For subagent sessions, "user" role messages are task instructions from the parent agent,
+      // not from the human owner. Attribute them to parentPeer if known, agentPeer as fallback.
+      const userPeer = isSubagent ? (parentPeer ?? agentPeer) : state.ownerPeer!;
+      const messages = extractMessages(newRawMessages, userPeer, agentPeer, state.cfg.noisePatterns);
 
       if (messages.length === 0) {
         await session.setMetadata({ ...existingMeta, ...sessionMeta, lastSavedIndex: event.messages.length });

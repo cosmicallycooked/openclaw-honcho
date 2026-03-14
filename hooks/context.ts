@@ -21,12 +21,16 @@ export function registerContextHook(api: OpenClawPluginApi, state: PluginState):
 
       if (isSubagent) {
         try {
-          const peerCtx = await agentPeer.context({ target: state.ownerPeer! });
+          // Load the subagent's own accumulated context (what it has learned
+          // across its past runs), not the owner/user context. The task in the
+          // first message already carries the parent's curation; the subagent
+          // only needs its own institutional memory here.
+          const peerCtx = await agentPeer.context();
           if (peerCtx.peerCard?.length) {
             sections.push(`Key facts:\n${peerCtx.peerCard.map((f: string) => `• ${f}`).join("\n")}`);
           }
           if (peerCtx.representation) {
-            sections.push(`User context:\n${peerCtx.representation}`);
+            sections.push(`Subagent context:\n${peerCtx.representation}`);
           }
         } catch (e: unknown) {
           const isNotFound =

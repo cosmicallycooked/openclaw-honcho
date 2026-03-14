@@ -13,7 +13,7 @@ import { registerSessionHooks } from "../hooks/session.js";
 import { registerContextHook } from "../hooks/context.js";
 
 const API_KEY = process.env.HONCHO_API_KEY;
-const WORKSPACE_ID = process.env.HONCHO_WORKSPACE_ID ?? "openclaw-test-hooks";
+const WORKSPACE_ID = process.env.HONCHO_WORKSPACE_ID ?? "openclaw-test";
 const BASE_URL = process.env.HONCHO_BASE_URL ?? "https://api.honcho.dev";
 const maybe = !API_KEY ? describe.skip : describe;
 const maybeDream =

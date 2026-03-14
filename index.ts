@@ -10,6 +10,7 @@ import type { OpenClawPluginApi } from "openclaw/plugin-sdk";
 import { honchoConfigSchema } from "./config.js";
 import { createPluginState } from "./state.js";
 import { registerGatewayHook } from "./hooks/gateway.js";
+import { registerSessionHooks } from "./hooks/session.js";
 import { registerContextHook } from "./hooks/context.js";
 import { registerCaptureHook } from "./hooks/capture.js";
 import { registerSubagentHooks } from "./hooks/subagent.js";
@@ -34,6 +35,7 @@ export default {
 
     // Hooks
     registerGatewayHook(api, state);
+    registerSessionHooks(api, state);
     registerSubagentHooks(api);
     registerContextHook(api, state);
     registerCaptureHook(api, state);

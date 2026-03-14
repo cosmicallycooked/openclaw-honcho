@@ -22,6 +22,11 @@ export type PluginState = {
    * Used by the capture hook to determine where the current turn starts in the
    * accumulated message array, so first-init skips pre-installation history. */
   turnStartIndex: Map<string, number>;
+  /** Context cache populated at session_start. Maps Honcho session key to the
+   * pre-formatted system prompt string, or null if the session has no history.
+   * Cache miss (key absent) means session_start hasn't fired yet — fall back to
+   * a live Honcho call. */
+  contextCache: Map<string, string | null>;
   initialized: boolean;
   api: OpenClawPluginApi;
   ensureInitialized: () => Promise<void>;
@@ -51,6 +56,7 @@ export function createPluginState(api: OpenClawPluginApi): PluginState {
     agentPeers: new Map<string, Peer>(),
     agentPeerMap: {},
     turnStartIndex: new Map<string, number>(),
+    contextCache: new Map<string, string | null>(),
     initialized: false,
     api,
     ensureInitialized,

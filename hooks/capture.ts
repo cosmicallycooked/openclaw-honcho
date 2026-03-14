@@ -11,7 +11,7 @@ import { subagentParentMap } from "./subagent.js";
 
 export function registerCaptureHook(api: OpenClawPluginApi, state: PluginState): void {
   api.on("agent_end", async (event, ctx) => {
-    if (!event.success || !event.messages?.length) return;
+    if (!event.messages?.length) return;
 
     const sessionKey = buildSessionKey(ctx);
     const agentId = ctx.agentId ?? state.resolveDefaultAgentId();

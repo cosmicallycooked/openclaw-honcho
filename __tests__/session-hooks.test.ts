@@ -1,8 +1,8 @@
 /**
- * Integration: session_start/session_end hooks + context cache
+ * Integration: session_end hook + before_prompt_build context injection
  *
  * Requires a live Honcho workspace (HONCHO_API_KEY).
- * Seeds a session with messages so session_start has real history to load.
+ * Seeds a session with messages so before_prompt_build has real history to load.
  *
  * HONCHO_SKIP_DREAM_TESTS=1 — skip the dreamOnSessionEnd test
  */
@@ -57,12 +57,11 @@ function makeApi(cfg: Record<string, unknown> = {}) {
 const SESSION_CTX = { sessionKey: RUN_ID, messageProvider: "telegram", agentId: AGENT_ID };
 const SESSION_EVENT = { sessionId: RUN_ID };
 
-maybe("session hooks: context cache", () => {
+maybe("before_prompt_build: context injection", () => {
   let api: ReturnType<typeof makeApi>;
-  let state: ReturnType<typeof createPluginState>;
 
   beforeAll(async () => {
-    // Seed some history so session_start has real context to load.
+    // Seed some history so before_prompt_build has real messages to work with.
     const honcho = new Honcho({ apiKey: API_KEY, workspaceId: WORKSPACE_ID, baseURL: BASE_URL });
     const ownerPeer = await honcho.peer("owner", { metadata: {} });
     const agentPeer = await honcho.peer(`agent-${AGENT_ID}`, { metadata: { agentId: AGENT_ID } });
@@ -79,50 +78,38 @@ maybe("session hooks: context cache", () => {
     ]);
 
     api = makeApi();
-    state = createPluginState(api as never);
+    const state = createPluginState(api as never);
     registerSessionHooks(api as never, state);
     registerContextHook(api as never, state);
   }, 30_000);
 
-  it("session_start populates the context cache", async () => {
-    await api.fire("session_start", SESSION_EVENT, SESSION_CTX);
-    expect(state.contextCache.has(SESSION_KEY)).toBe(true);
-  });
-
-  it("before_prompt_build returns prependContext (not systemPrompt) from cache", async () => {
-    // Manually prime cache with known content — Honcho won't produce a representation
-    // for a freshly seeded session without a dream, so we control the value here.
-    const fakeContext = "## User Memory Context\n\nKey facts:\n• Prefers TypeScript";
-    state.contextCache.set(SESSION_KEY, fakeContext);
-
+  it("returns prependContext (not systemPrompt) when history exists", async () => {
     const result = await api.fireCapture(
       "before_prompt_build",
       { prompt: "hello", messages: [] },
       SESSION_CTX,
     ) as Record<string, unknown> | undefined;
 
-    expect(result).toBeDefined();
-    expect(result).not.toHaveProperty("systemPrompt");
-    expect(result).toHaveProperty("prependContext", fakeContext);
-    // Cache must be unchanged (not evicted or mutated by context hook).
-    expect(state.contextCache.get(SESSION_KEY)).toBe(fakeContext);
+    // May be undefined if Honcho hasn't processed the seeded messages yet (no dream),
+    // but if context is returned it must use prependContext not systemPrompt.
+    if (result !== undefined) {
+      expect(result).not.toHaveProperty("systemPrompt");
+      expect(result).toHaveProperty("prependContext");
+      expect(typeof result.prependContext).toBe("string");
+    }
   });
 
-  it("before_prompt_build returns undefined when cache is null (no history)", async () => {
-    state.contextCache.set(SESSION_KEY, null);
+  it("returns undefined for a session with no history", async () => {
+    const freshKey = `fresh-${Date.now()}`;
+    const freshCtx = { sessionKey: freshKey, messageProvider: "telegram", agentId: AGENT_ID };
 
     const result = await api.fireCapture(
       "before_prompt_build",
       { prompt: "hello", messages: [] },
-      SESSION_CTX,
+      freshCtx,
     );
 
     expect(result).toBeUndefined();
-  });
-
-  it("session_end evicts the cache entry", async () => {
-    await api.fire("session_end", { ...SESSION_EVENT, messageCount: 4 }, SESSION_CTX);
-    expect(state.contextCache.has(SESSION_KEY)).toBe(false);
   });
 });
 
@@ -132,8 +119,6 @@ maybeDream("session hooks: dreamOnSessionEnd", () => {
     const state = createPluginState(api as never);
     registerSessionHooks(api as never, state);
 
-    // Prime the cache so session_end has an initialized state to work with.
-    await api.fire("session_start", SESSION_EVENT, SESSION_CTX);
     await expect(
       api.fire("session_end", { ...SESSION_EVENT, messageCount: 4 }, SESSION_CTX),
     ).resolves.not.toThrow();

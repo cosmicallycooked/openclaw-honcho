@@ -2,6 +2,8 @@
  * Configuration schema and parsing for the Honcho memory plugin.
  */
 
+import { z } from "zod";
+
 export const DEFAULT_NOISE_PATTERNS: string[] = [
   "HEARTBEAT_OK",
   "A scheduled reminder has been triggered",
@@ -9,15 +11,55 @@ export const DEFAULT_NOISE_PATTERNS: string[] = [
   "Queued messages from",
 ];
 
+const WorkspaceConfigSchema = z
+  .object({
+    reasoning: z
+      .object({
+        enabled: z.boolean().optional(),
+        customInstructions: z.string().optional(),
+      })
+      .optional(),
+    peerCard: z
+      .object({
+        use: z.boolean().optional(),
+        create: z.boolean().optional(),
+      })
+      .optional(),
+    summary: z
+      .object({
+        enabled: z.boolean().optional(),
+        messagesPerShortSummary: z.number().int().min(10).optional(),
+        messagesPerLongSummary: z.number().int().min(20).optional(),
+      })
+      .optional(),
+    dream: z
+      .object({
+        enabled: z.boolean().optional(),
+      })
+      .optional(),
+  })
+  .optional();
+
+export type WorkspaceConfig = z.infer<typeof WorkspaceConfigSchema>;
+
+export const DEFAULT_WORKSPACE_CONFIG: Required<NonNullable<WorkspaceConfig>> = {
+  reasoning: { enabled: true },
+  peerCard: { use: true, create: true },
+  // Raise summary thresholds above Honcho's defaults (10/20) to reduce noise.
+  summary: { enabled: true, messagesPerShortSummary: 20, messagesPerLongSummary: 50 },
+  dream: { enabled: true },
+};
+
 export type HonchoConfig = {
   apiKey?: string;
   workspaceId: string;
   baseUrl: string;
   noisePatterns: string[];
-  ownerObserveOthers: boolean;
+
   contextTokens: number;
   maxConclusions: number;
   dreamOnSessionEnd: boolean;
+  workspace: Required<NonNullable<WorkspaceConfig>>;
 };
 
 /**
@@ -51,6 +93,14 @@ export const honchoConfigSchema = {
       : [];
     const noisePatterns = [...new Set([...DEFAULT_NOISE_PATTERNS, ...userPatterns])];
 
+    const userWorkspace = WorkspaceConfigSchema.parse(cfg.workspace) ?? {};
+    const workspace: HonchoConfig["workspace"] = {
+      reasoning: { ...DEFAULT_WORKSPACE_CONFIG.reasoning, ...userWorkspace.reasoning },
+      peerCard: { ...DEFAULT_WORKSPACE_CONFIG.peerCard, ...userWorkspace.peerCard },
+      summary: { ...DEFAULT_WORKSPACE_CONFIG.summary, ...userWorkspace.summary },
+      dream: { ...DEFAULT_WORKSPACE_CONFIG.dream, ...userWorkspace.dream },
+    };
+
     return {
       apiKey,
       workspaceId:
@@ -62,10 +112,11 @@ export const honchoConfigSchema = {
           ? cfg.baseUrl
           : process.env.HONCHO_BASE_URL ?? "https://api.honcho.dev",
       noisePatterns,
-      ownerObserveOthers: typeof cfg.ownerObserveOthers === "boolean" ? cfg.ownerObserveOthers : false,
+
       contextTokens: typeof cfg.contextTokens === "number" && cfg.contextTokens > 0 ? cfg.contextTokens : 4000,
       maxConclusions: typeof cfg.maxConclusions === "number" && cfg.maxConclusions > 0 ? cfg.maxConclusions : 50,
       dreamOnSessionEnd: typeof cfg.dreamOnSessionEnd === "boolean" ? cfg.dreamOnSessionEnd : false,
+      workspace,
     };
   },
 };

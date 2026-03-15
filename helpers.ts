@@ -11,8 +11,10 @@ import type { Peer, MessageInput } from "@honcho-ai/sdk";
  */
 export function buildSessionKey(ctx?: { sessionKey?: string; messageProvider?: string }): string {
   const baseKey = ctx?.sessionKey ?? "default";
-  const provider = ctx?.messageProvider ?? "unknown";
-  const combined = `${baseKey}-${provider}`;
+  // messageProvider disambiguates sessions across platforms (e.g. telegram vs slack).
+  // Cron and other internal triggers don't set it — omit rather than appending "-unknown".
+  const provider = ctx?.messageProvider;
+  const combined = provider ? `${baseKey}-${provider}` : baseKey;
   return combined.replace(/[^a-zA-Z0-9-]/g, "-");
 }
 
@@ -142,7 +144,7 @@ export function extractMessages(
   rawMessages: unknown[],
   ownerPeer: Peer,
   agentPeer: Peer,
-  noisePatterns: string[] = []
+  noisePatterns: string[] = [],
 ): MessageInput[] {
   const result: MessageInput[] = [];
 

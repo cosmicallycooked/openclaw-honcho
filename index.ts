@@ -36,7 +36,7 @@ export default {
     // Hooks
     registerGatewayHook(api, state);
     registerSessionHooks(api, state);
-    registerSubagentHooks(api);
+    registerSubagentHooks(api, state);
     registerContextHook(api, state);
     registerCaptureHook(api, state);
 

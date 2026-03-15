@@ -2,11 +2,12 @@
 import type { OpenClawPluginApi } from "openclaw/plugin-sdk";
 import type { PluginState } from "../state.js";
 import { buildSessionKey, isSubagentSession } from "../helpers.js";
+import { resolveHonchoKey } from "./subagent.js";
 
 export function registerSessionHooks(api: OpenClawPluginApi, state: PluginState): void {
   api.on("session_end", async (_event, ctx) => {
     if (isSubagentSession(ctx)) return;
-    const sessionKey = buildSessionKey(ctx);
+    const sessionKey = resolveHonchoKey(ctx);
 
     if (state.cfg.dreamOnSessionEnd) {
       try {

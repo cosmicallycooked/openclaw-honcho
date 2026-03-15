@@ -80,6 +80,8 @@ export function createPluginState(api: OpenClawPluginApi): PluginState {
       await honcho.setMetadata({ ...wsMeta, agentPeerMap: state.agentPeerMap });
     }
 
+    await honcho.setConfiguration(cfg.workspace);
+
     state.ownerPeer = await honcho.peer(OWNER_ID, { metadata: {} });
     state.initialized = true;
   }

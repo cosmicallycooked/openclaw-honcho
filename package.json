@@ -23,7 +23,8 @@
   ],
   "dependencies": {
     "@honcho-ai/sdk": "^2.0.0",
-    "@sinclair/typebox": "^0.32.0"
+    "@sinclair/typebox": "^0.32.0",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

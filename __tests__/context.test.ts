@@ -72,7 +72,7 @@ function makeState(overrides: Partial<PluginState> = {}): PluginState {
       baseUrl: "http://localhost",
       contextTokens: 2000,
       maxConclusions: 10,
-      ownerObserveOthers: false,
+
       dreamOnSessionEnd: false,
       noisePatterns: [],
     } as PluginState["cfg"],
@@ -152,6 +152,18 @@ describe("registerContextHook — subagent before_prompt_build", () => {
 
     expect(result).toBeUndefined();
     expect(state.ensureInitialized).not.toHaveBeenCalled();
+  });
+});
+
+describe("registerContextHook — no messageProvider (cron/internal events)", () => {
+  it("does NOT call state.honcho.session() when messageProvider is absent", async () => {
+    const { api, getHandler } = makeApi();
+    const state = makeState();
+    registerContextHook(api as never, state);
+
+    await getHandler()(makeEvent(), { sessionKey: MAIN_SESSION_KEY, agentId: "worker" });
+
+    expect(state.honcho.session).not.toHaveBeenCalled();
   });
 });
 

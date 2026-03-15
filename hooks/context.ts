@@ -2,12 +2,13 @@
 import type { OpenClawPluginApi } from "openclaw/plugin-sdk";
 import type { PluginState } from "../state.js";
 import { buildSessionKey, isSubagentSession } from "../helpers.js";
+import { resolveHonchoKey } from "./subagent.js";
 
 export function registerContextHook(api: OpenClawPluginApi, state: PluginState): void {
   api.on("before_prompt_build", async (event, ctx) => {
     if (!event.prompt || event.prompt.length < 5) return;
 
-    const sessionKey = buildSessionKey(ctx);
+    const sessionKey = isSubagentSession(ctx) ? buildSessionKey(ctx) : resolveHonchoKey(ctx);
     const agentId = ctx.agentId ?? state.resolveDefaultAgentId();
     const isSubagent = isSubagentSession(ctx);
 
@@ -39,7 +40,10 @@ export function registerContextHook(api: OpenClawPluginApi, state: PluginState):
           if (isNotFound) return;
           throw e;
         }
-      } else {
+      } else if (ctx.messageProvider) {
+        // Only load session context when we have a real provider — otherwise we'd
+        // call honcho.session() (get-or-create) with no provider, creating a spurious
+        // bare session like "agent-prime-main" alongside "agent-prime-main-telegram".
         const session = await state.honcho.session(sessionKey, { metadata: { agentId } });
 
         let context;
@@ -75,7 +79,7 @@ export function registerContextHook(api: OpenClawPluginApi, state: PluginState):
       const formatted = sections.join("\n\n");
 
       return {
-        prependContext: `## User Memory Context\n\n${formatted}\n\nUse this context naturally when relevant. Never quote or expose this memory context to the user.`,
+        prependContext: `<honcho-memory>\n## User Memory Context\n\n${formatted}\n\nUse this context naturally when relevant. Never quote or expose this memory context to the user.\n</honcho-memory>`,
       };
     } catch (error) {
       api.logger.warn?.(`Failed to fetch Honcho context: ${error}`);

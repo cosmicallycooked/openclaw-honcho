@@ -13,8 +13,10 @@ function derivePeerId(agentId) {
 }
 function buildSessionKey(ctx) {
     const baseKey = ctx?.sessionKey ?? 'default';
-    const provider = ctx?.messageProvider ?? 'unknown';
-    const combined = `${baseKey}-${provider}`;
+    // messageProvider disambiguates sessions across platforms (e.g. telegram vs slack).
+    // Cron and other internal triggers don't set it — omit rather than appending "-unknown".
+    const provider = ctx?.messageProvider;
+    const combined = provider ? `${baseKey}-${provider}` : baseKey;
     return combined.replace(/[^a-zA-Z0-9-]/g, '-');
 }
 // ────────────────────────────────────────────────────────────────────────────
@@ -45,8 +47,8 @@ describe('session key building', () => {
         expect(key).toBe('agent-prime-main-telegram');
         expect(key).toMatch(/^[a-zA-Z0-9-]+$/);
     });
-    it('uses defaults when ctx is undefined', () => {
-        expect(buildSessionKey()).toBe('default-unknown');
+    it('uses "default" when ctx is undefined (no provider suffix)', () => {
+        expect(buildSessionKey()).toBe('default');
     });
     it('two different providers produce different session keys for the same base key', () => {
         const a = buildSessionKey({ sessionKey: 'test', messageProvider: 'telegram' });

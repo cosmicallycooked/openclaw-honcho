@@ -11,13 +11,9 @@
  *
  * HONCHO_SKIP_DREAM_TESTS=1  — skip Suite 2 (dream worker required, ~60s)
  */
-import { describe, it, expect, beforeAll } from 'vitest';
+import { it, expect, beforeAll } from 'vitest';
 import { Honcho } from '@honcho-ai/sdk';
-const API_KEY = process.env.HONCHO_API_KEY;
-const WORKSPACE_ID = process.env.HONCHO_WORKSPACE_ID ?? 'openclaw-test';
-const BASE_URL = process.env.HONCHO_BASE_URL ?? 'https://api.honcho.dev';
-const maybe = !API_KEY ? describe.skip : describe;
-const maybeDream = (!API_KEY || process.env.HONCHO_SKIP_DREAM_TESTS === '1') ? describe.skip : describe;
+import { API_KEY, WORKSPACE_ID, BASE_URL, maybe, maybeDream } from './helpers/integration.js';
 const RUN_ID = `${Date.now()}`;
 let honcho;
 let ownerPeer;

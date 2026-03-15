@@ -4,12 +4,9 @@
  * Verifies that conclusions written for one peer are not visible from another
  * peer's scope, and that observer/observed attribution is correct.
  */
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { it, expect, beforeAll, afterAll } from 'vitest';
 import { Honcho } from '@honcho-ai/sdk';
-const API_KEY = process.env.HONCHO_API_KEY;
-const WORKSPACE_ID = process.env.HONCHO_WORKSPACE_ID ?? 'openclaw-test';
-const BASE_URL = process.env.HONCHO_BASE_URL ?? 'https://api.honcho.dev';
-const maybe = !API_KEY ? describe.skip : describe;
+import { API_KEY, WORKSPACE_ID, BASE_URL, maybe } from './helpers/integration.js';
 const RUN_ID = `test-${Date.now()}`;
 maybe('multi-peer conclusion isolation', () => {
     let honcho;

@@ -2,12 +2,19 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { registerCaptureHook } from "../hooks/capture.js";
 import { subagentParentMap, subagentParentHonchoSessionMap, sessionKeyToHonchoKey, resolveHonchoKey } from "../hooks/subagent.js";
 import type { PluginState } from "../state.js";
+import {
+  type HookHandler,
+  makeCtx,
+  makeCfg,
+  makeMockLogger,
+  makePeer,
+  makeMockSession,
+  makeMockHoncho,
+} from "./helpers/unit.js";
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-type HookHandler = (event: Record<string, unknown>, ctx: Record<string, unknown>) => Promise<unknown>;
 
 function makeApi() {
   let capturedHandler: HookHandler | undefined;
@@ -15,7 +22,7 @@ function makeApi() {
     on: vi.fn((hookName: string, handler: HookHandler) => {
       if (hookName === "agent_end") capturedHandler = handler;
     }),
-    logger: { warn: vi.fn(), debug: vi.fn(), info: vi.fn(), error: vi.fn() },
+    logger: makeMockLogger(),
   };
   const getHandler = () => {
     if (!capturedHandler) throw new Error("agent_end handler not registered");
@@ -24,48 +31,16 @@ function makeApi() {
   return { api, getHandler };
 }
 
-function makePeer(id: string) {
-  return {
-    id,
-    message: vi.fn((content: string) => ({ peerId: id, content })),
-    getMetadata: vi.fn().mockResolvedValue({}),
-    setMetadata: vi.fn().mockResolvedValue(undefined),
-    context: vi.fn().mockResolvedValue({ peerCard: [], representation: null }),
-  };
-}
-
 function makeState(overrides: Partial<PluginState> = {}): PluginState {
   const ownerPeer = makePeer("owner");
   const agentPeer = makePeer("agent-worker");
   const parentPeer = makePeer("agent-orchestrator");
-
-  const mockSession = {
-    context: vi.fn().mockResolvedValue({}),
-    getMetadata: vi.fn().mockResolvedValue({}),
-    setMetadata: vi.fn().mockResolvedValue(undefined),
-    addMessages: vi.fn().mockResolvedValue(undefined),
-    addPeers: vi.fn().mockResolvedValue(undefined),
-  };
-
-  const mockHoncho = {
-    session: vi.fn().mockResolvedValue(mockSession),
-    peer: vi.fn().mockResolvedValue(ownerPeer),
-    getMetadata: vi.fn().mockResolvedValue({}),
-    setMetadata: vi.fn().mockResolvedValue(undefined),
-    peers: vi.fn().mockReturnValue([]),
-  };
+  const mockSession = makeMockSession();
+  const mockHoncho = makeMockHoncho(ownerPeer, mockSession);
 
   return {
     honcho: mockHoncho as unknown as PluginState["honcho"],
-    cfg: {
-      apiKey: "test",
-      workspaceId: "test-workspace",
-      baseUrl: "http://localhost",
-      contextTokens: 2000,
-      maxConclusions: 10,
-      dreamOnSessionEnd: false,
-      noisePatterns: [],
-    } as PluginState["cfg"],
+    cfg: makeCfg(),
     ownerPeer: ownerPeer as unknown as PluginState["ownerPeer"],
     agentPeers: new Map(),
     agentPeerMap: {},
@@ -92,11 +67,6 @@ const makeMessages = () => [
   { role: "assistant", content: "I will research the open PRs now." },
 ];
 
-const makeCtx = (sessionKey: string, agentId = "worker") => ({
-  sessionKey,
-  agentId,
-  messageProvider: "discord",
-});
 
 const makeEvent = (overrides: Record<string, unknown> = {}) => ({
   messages: makeMessages(),

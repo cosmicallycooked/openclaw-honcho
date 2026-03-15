@@ -1,6 +1,5 @@
 // @ts-ignore - resolved by openclaw runtime
 import type { OpenClawPluginApi, PluginHookSubagentContext, PluginHookSubagentSpawnedEvent, PluginHookSubagentEndedEvent } from "openclaw/plugin-sdk";
-import type { PluginState } from "../state.js";
 import { buildSessionKey } from "../helpers.js";
 
 /**
@@ -50,7 +49,7 @@ export function resolveHonchoKey(ctx?: { sessionKey?: string; messageProvider?: 
  */
 export const subagentParentHonchoSessionMap = new Map<string, string>();
 
-export function registerSubagentHooks(api: OpenClawPluginApi, state: PluginState): void {
+export function registerSubagentHooks(api: OpenClawPluginApi): void {
   api.on("before_prompt_build", (_event, ctx) => {
     if (ctx.sessionKey && ctx.agentId) {
       sessionKeyToAgentId.set(ctx.sessionKey, ctx.agentId);
@@ -123,19 +122,7 @@ export function registerSubagentHooks(api: OpenClawPluginApi, state: PluginState
       }
     }
 
-    // Proactively add the subagent as a peer in the parent session so the
-    // parent session knows about it immediately (not just when agent_end fires).
-    if (parentHonchoKey && event.agentId) {
-      try {
-        await state.ensureInitialized();
-        const subagentPeer = await state.getAgentPeer(event.agentId);
-        const parentSession = await state.honcho.session(parentHonchoKey);
-        await parentSession.addPeers([[subagentPeer.id, { observeMe: true, observeOthers: false }]]);
-        api.logger.warn?.(`[honcho] subagent_spawned: added peer ${subagentPeer.id} to parent session ${parentHonchoKey}`);
-      } catch (e) {
-        api.logger.warn?.(`[honcho] subagent_spawned: failed to add subagent peer to parent session: ${e}`);
-      }
-    }
+    api.logger.warn?.(`[honcho] subagent_spawned: mapped child=${childSessionKey} → parentHonchoKey=${parentHonchoKey ?? "unknown"}`);
   });
 
   api.on("subagent_ended", (event: PluginHookSubagentEndedEvent) => {

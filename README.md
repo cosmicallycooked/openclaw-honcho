@@ -67,7 +67,6 @@ Run `openclaw honcho setup` to configure interactively, or set values directly i
 | `workspaceId`          | `string`   | `"openclaw"`               | Honcho workspace ID for memory isolation. |
 | `baseUrl`              | `string`   | `"https://api.honcho.dev"` | API endpoint (for self-hosted instances). |
 | `noisePatterns`        | `string[]` | —                          | Additional substring patterns to skip messages. Merged with built-in defaults. |
-| `ownerObserveOthers`   | `boolean`  | `false`                    | Whether the owner peer observes agent messages in Honcho's social model. |
 
 ### Self-Hosted / Local Honcho
 
@@ -101,12 +100,6 @@ Add custom patterns via `noisePatterns` in your config:
 ```
 
 Custom patterns are merged with the built-in defaults. Matching uses substring comparison (`String.includes()`), not regex.
-
-### Owner Peer Observation
-
-Honcho's `observeOthers` controls whether a peer forms representations of other peers based on messages it witnessed in shared sessions. The agent peer always has `observeOthers: true` — it sees and reasons about the user's messages. The owner (user) peer defaults to `observeOthers: false` — modeled only from what the user said, not what the agent replied.
-
-Set `ownerObserveOthers: true` to let the owner peer also observe agent messages. This gives Honcho perspective-aware memory: the owner stores conclusions about the agent based only on what it witnessed, enabling the user's representation to reflect the full conversational context rather than just their own side of it.
 
 ## How it works
 
